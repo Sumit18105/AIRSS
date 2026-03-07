@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIRSS — AI-Integrated Rescue & Support System</title>
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --red     : #e74c3c;
+            --red-dark: #c0392b;
+            --blue    : #3498db;
+            --green   : #2ecc71;
+            --yellow  : #f39c12;
+            --purple  : #9b59b6;
+            --bg      : #0a0a1a;
+            --bg2     : #0f0f24;
+            --bg3     : #13132e;
+            --card    : rgba(255,255,255,0.04);
+            --border  : rgba(255,255,255,0.08);
+            --text    : #e0e0e0;
+            --muted   : #666;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background : var(--bg);
+            color      : var(--text);
+            min-height : 100vh;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg2); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--red); }
+
+        /* ── Navbar ── */
+        .navbar {
+            background    : linear-gradient(90deg, #08081a, #10102a);
+            border-bottom : 2px solid var(--red);
+            padding       : 0 24px;
+            display       : flex;
+            align-items   : center;
+            justify-content: space-between;
+            height        : 56px;
+            position      : sticky;
+            top           : 0;
+            z-index       : 200;
+            box-shadow    : 0 2px 20px rgba(231,76,60,0.2);
+        }
+        .navbar-brand { display:flex; align-items:center; gap:10px; }
+        .navbar-brand .logo { font-size:1.6em; }
+        .navbar-brand .name {
+            color:white; font-size:1.1em;
+            font-weight:bold; letter-spacing:1px;
+        }
+        .navbar-brand .sub {
+            color:var(--muted); font-size:0.65em;
+            display:block; font-weight:normal;
+        }
+        .navbar-center {
+            display:flex; gap:4px;
+            background:rgba(255,255,255,0.04);
+            padding:4px; border-radius:10px;
+            border:1px solid var(--border);
+        }
+        .nav-btn {
+            background:transparent; border:none;
+            color:var(--muted); padding:6px 14px;
+            font-size:0.78em; cursor:pointer;
+            border-radius:7px; transition:all 0.2s;
+            white-space:nowrap;
+        }
+        .nav-btn:hover  { color:white; background:rgba(255,255,255,0.06); }
+        .nav-btn.active { color:white; background:var(--red); box-shadow:0 0 12px rgba(231,76,60,0.4); }
+        .navbar-right   { display:flex; align-items:center; gap:12px; }
+        .live-pill {
+            display:flex; align-items:center; gap:6px;
+            background:rgba(46,204,113,0.1);
+            border:1px solid rgba(46,204,113,0.3);
+            border-radius:20px; padding:4px 12px;
+            font-size:0.72em; color:var(--green); font-weight:bold;
+        }
+        .pulse-dot {
+            width:7px; height:7px; border-radius:50%;
+            background:var(--green); animation:pulse 1.2s infinite;
+        }
+        @keyframes pulse {
+            0%,100% { opacity:1; transform:scale(1); box-shadow:0 0 0 0 rgba(46,204,113,0.4); }
+            50%     { opacity:.6; transform:scale(1.3); box-shadow:0 0 0 4px rgba(46,204,113,0); }
+        }
+        .time-display { font-size:0.75em; color:var(--muted); font-family:monospace; }
+
+        /* ── Alert Banner ── */
+        .alert-banner {
+            display:none;
+            background:linear-gradient(90deg,#e74c3c,#c0392b);
+            color:white; padding:10px 24px;
+            font-size:0.85em; font-weight:bold;
+            text-align:center;
+            animation:flashBanner 0.5s ease infinite alternate;
+        }
+        @keyframes flashBanner { from{opacity:1} to{opacity:0.7} }
+
+        /* ── Stats Bar ── */
+        .stats-bar {
+            display:grid;
+            grid-template-columns:repeat(8,1fr);
+            gap:10px; padding:14px 24px;
+            background:var(--bg2);
+            border-bottom:1px solid #1a1a35;
+        }
+        .stat-card {
+            background:var(--card); border:1px solid var(--border);
+            border-radius:12px; padding:12px 8px;
+            text-align:center; cursor:pointer;
+            transition:all 0.25s; position:relative; overflow:hidden;
+        }
+        .stat-card::before {
+            content:''; position:absolute;
+            top:0; left:0; right:0; height:2px;
+            background:var(--accent,var(--red));
+            transform:scaleX(0); transition:transform 0.3s;
+        }
+        .stat-card:hover::before { transform:scaleX(1); }
+        .stat-card:hover {
+            border-color:var(--accent,var(--red));
+            background:rgba(255,255,255,0.07);
+            transform:translateY(-2px);
+        }
+        .stat-card.fps-card  { --accent:var(--yellow); }
+        .stat-card.wifi-card { --accent:var(--blue); }
+        .stat-card.gps-card  { --accent:var(--green); }
+        .stat-card.time-card { --accent:var(--purple); }
+        .stat-icon  { font-size:1.3em; margin-bottom:5px; }
+        .stat-value {
+            font-size:1.6em; font-weight:bold;
+            color:white; line-height:1; transition:color 0.3s;
+        }
+        .stat-value.red    { color:var(--red); }
+        .stat-value.green  { color:var(--green); }
+        .stat-value.yellow { color:var(--yellow); }
+        .stat-value.blue   { color:var(--blue); }
+        .stat-value.purple { color:var(--purple); }
+        .stat-label {
+            font-size:0.6em; color:var(--muted); margin-top:4px;
+            text-transform:uppercase; letter-spacing:0.8px;
+        }
+
+        /* ── Main Layout ── */
+        .main-layout {
+            display:flex;
+            height:calc(100vh - 56px - 90px);
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width:280px; min-width:280px;
+            background:var(--bg2);
+            border-right:1px solid #1a1a35;
+            overflow-y:auto;
+            display:flex; flex-direction:column; gap:1px;
+        }
+        .sidebar-section { padding:14px; border-bottom:1px solid #1a1a35; }
+        .sidebar-title {
+            font-size:0.65em; color:var(--muted);
+            text-transform:uppercase; letter-spacing:1px;
+            margin-bottom:10px;
+        }
+        .mini-log-item {
+            background:var(--card); border:1px solid var(--border);
+            border-radius:8px; padding:8px 10px; margin-bottom:6px;
+            font-size:0.75em; cursor:pointer; transition:border-color 0.2s;
+            animation:slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity:0; transform:translateX(-10px); }
+            to   { opacity:1; transform:translateX(0); }
+        }
+        .mini-log-item:hover { border-color:var(--red); }
+        .mini-log-item .mini-count { color:var(--red); font-weight:bold; font-size:1.1em; }
+        .mini-log-item .mini-time  { color:var(--muted); font-size:0.85em; }
+        .mini-log-item .mini-gps   { color:var(--blue); font-size:0.82em; margin-top:2px; }
+        .rescue-request-item {
+            background:rgba(46,204,113,0.06);
+            border:1px solid rgba(46,204,113,0.2);
+            border-radius:8px; padding:8px 10px; margin-bottom:6px;
+            font-size:0.75em; cursor:pointer; animation:slideIn 0.3s ease;
+        }
+        .rescue-request-item .rescue-needs { color:var(--green); font-weight:bold; }
+        .rescue-request-item .rescue-gps   { color:var(--blue); font-size:0.85em; margin-top:2px; }
+        .no-data-msg { text-align:center; color:var(--muted); font-size:0.75em; padding:10px 0; }
+
+        /* ── Content Area ── */
+        .content-area { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+
+        /* ── Tab Bar ── */
+        .tab-bar {
+            display:flex; gap:2px; padding:8px 16px 0;
+            background:var(--bg2); border-bottom:1px solid #1a1a35;
+            overflow-x:auto;
+        }
+        .tab-btn {
+            background:transparent; border:1px solid transparent;
+            border-bottom:none; color:var(--muted);
+            padding:7px 14px; font-size:0.78em; cursor:pointer;
+            border-radius:7px 7px 0 0; white-space:nowrap; transition:all 0.2s;
+        }
+        .tab-btn:hover  { color:#aaa; background:rgba(255,255,255,0.04); }
+        .tab-btn.active { color:white; background:var(--bg3); border-color:var(--red); }
+        .tab-btn .badge-count {
+            background:var(--red); color:white;
+            border-radius:10px; padding:1px 6px;
+            font-size:0.8em; margin-left:4px;
+        }
+
+        /* ── Tab Panels ── */
+        .tab-panel {
+            display:none; flex:1; overflow-y:auto;
+            padding:16px; background:var(--bg3);
+        }
+        .tab-panel.active { display:flex; flex-direction:column; gap:14px; }
+
+        /* ── Panel Header ── */
+        .panel-hdr {
+            display:flex; align-items:center;
+            justify-content:space-between;
+            padding:10px 14px;
+            background:rgba(231,76,60,0.08);
+            border:1px solid rgba(231,76,60,0.25);
+            border-radius:10px 10px 0 0;
+            font-size:0.8em; font-weight:bold; color:var(--red);
+            text-transform:uppercase; letter-spacing:0.5px;
+        }
+        .panel-hdr .hdr-right { display:flex; gap:8px; align-items:center; }
+        .hdr-badge {
+            background:rgba(46,204,113,0.15);
+            border:1px solid rgba(46,204,113,0.3);
+            color:var(--green); padding:2px 8px;
+            border-radius:10px; font-size:0.82em;
+        }
+        .panel-body {
+            background:rgba(255,255,255,0.02);
+            border:1px solid var(--border);
+            border-top:none; border-radius:0 0 10px 10px; overflow:hidden;
+        }
+
+        /* ── Live Feed ── */
+        .feed-container {
+            position:relative; background:#000;
+            border-radius:0 0 10px 10px; text-align:center;
+            min-height:380px; display:flex;
+            align-items:center; justify-content:center; overflow:hidden;
+        }
+        .feed-container img { max-width:100%; max-height:480px; display:block; }
+        .feed-overlays {
+            position:absolute; top:10px; right:10px;
+            display:flex; flex-direction:column; gap:5px;
+        }
+        .ov-badge {
+            background:rgba(0,0,0,0.75);
+            border:1px solid rgba(255,255,255,0.12);
+            border-radius:7px; padding:4px 10px;
+            font-size:0.72em; color:#aaa; backdrop-filter:blur(4px);
+        }
+        .ov-badge b { color:white; }
+        .ov-badge.alert-ov { border-color:var(--red); color:var(--red); animation:flashBanner 0.5s infinite alternate; }
+        .feed-corner-tl { position:absolute; top:10px; left:10px; font-size:0.7em; }
+        .rec-badge {
+            background:rgba(231,76,60,0.85); color:white;
+            padding:3px 10px; border-radius:5px; font-weight:bold;
+            display:flex; align-items:center; gap:5px;
+        }
+        .rec-dot { width:7px; height:7px; border-radius:50%; background:white; animation:pulse 1s infinite; }
+
+        /* ── Map ── */
+        .map-frame { width:100%; height:460px; border:none; border-radius:0 0 10px 10px; display:block; }
+        .map-controls {
+            display:flex; gap:8px; padding:10px 14px;
+            background:rgba(255,255,255,0.02);
+            border:1px solid var(--border); border-top:none;
+            flex-wrap:wrap; align-items:center;
+        }
+        .map-legend-item { display:flex; align-items:center; gap:6px; font-size:0.73em; color:#aaa; }
+        .leg-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+        .map-refresh-btn {
+            margin-left:auto;
+            background:rgba(231,76,60,0.15); border:1px solid var(--red);
+            color:var(--red); padding:4px 12px; border-radius:6px;
+            font-size:0.75em; cursor:pointer; transition:all 0.2s;
+        }
+        .map-refresh-btn:hover { background:var(--red); color:white; }
+
+        /* ── Tables ── */
+        .data-table { width:100%; border-collapse:collapse; font-size:0.77em; }
+        .data-table th {
+            background:#16162e; color:var(--red);
+            padding:9px 12px; text-align:left;
+            font-size:0.73em; text-transform:uppercase;
+            letter-spacing:0.5px; position:sticky; top:0;
+        }
+        .data-table td {
+            padding:8px 12px;
+            border-bottom:1px solid rgba(255,255,255,0.04);
+            color:#ccc; vertical-align:middle;
+        }
+        .data-table tr:hover td { background:rgba(231,76,60,0.04); }
+        .data-table tr:last-child td { border-bottom:none; }
+        .gps-table    th { color:var(--blue); }
+        .gps-table    tr:hover td { background:rgba(52,152,219,0.04); }
+        .wifi-table   th { color:var(--blue); }
+        .rescue-table th { color:var(--green); }
+        .rescue-table tr:hover td { background:rgba(46,204,113,0.04); }
+
+        /* ── Tags ── */
+        .tag {
+            display:inline-flex; align-items:center; gap:3px;
+            padding:2px 8px; border-radius:10px; font-size:0.82em; font-weight:bold;
+        }
+        .tag-red    { background:rgba(231,76,60,0.15);  border:1px solid var(--red);    color:var(--red); }
+        .tag-green  { background:rgba(46,204,113,0.15); border:1px solid var(--green);  color:var(--green); }
+        .tag-blue   { background:rgba(52,152,219,0.15); border:1px solid var(--blue);   color:var(--blue); }
+        .tag-yellow { background:rgba(243,156,18,0.15); border:1px solid var(--yellow); color:var(--yellow); }
+        .tag-lost   { background:rgba(100,100,100,0.15); border:1px solid #555; color:#777; }
+
+        .maps-link { color:var(--blue); text-decoration:none; font-size:0.9em; }
+        .maps-link:hover { text-decoration:underline; color:#5dade2; }
+        .screenshot-link { color:var(--yellow); text-decoration:none; font-size:0.85em; }
+        .screenshot-link:hover { text-decoration:underline; }
+
+        .empty-state { text-align:center; padding:40px 20px; color:var(--muted); }
+        .empty-state .empty-icon { font-size:2.5em; margin-bottom:10px; }
+        .empty-state p { font-size:0.85em; }
+
+        /* ── WiFi Cards ── */
+        .wifi-cards {
+            display:grid;
+            grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+            gap:10px; padding:14px;
+        }
+        .wifi-card {
+            background:var(--card); border:1px solid var(--border);
+            border-radius:10px; padding:12px; transition:all 0.2s;
+        }
+        .wifi-card:hover { border-color:var(--blue); transform:translateY(-2px); }
+        .wifi-card.lost  { opacity:0.5; }
+        .wifi-card .wc-vendor { font-size:0.88em; font-weight:bold; color:white; display:flex; align-items:center; gap:6px; }
+        .wifi-card .wc-mac    { font-size:0.68em; color:var(--muted); font-family:monospace; margin-top:3px; }
+        .wifi-card .wc-distance { font-size:0.72em; color:var(--blue); margin-top:5px; }
+        .wifi-card .wc-times  { font-size:0.68em; color:var(--muted); margin-top:4px; line-height:1.6; }
+        .signal-bar { height:5px; background:rgba(255,255,255,0.08); border-radius:3px; margin-top:8px; overflow:hidden; }
+        .signal-fill { height:100%; border-radius:3px; transition:width 0.6s ease; }
+        .sig-good { background:linear-gradient(90deg,var(--blue),var(--green)); }
+        .sig-ok   { background:linear-gradient(90deg,var(--yellow),var(--blue)); }
+        .sig-bad  { background:linear-gradient(90deg,var(--red),var(--yellow)); }
+        .wifi-card .wc-footer { display:flex; justify-content:space-between; align-items:center; margin-top:6px; }
+        .probes-count { font-size:0.68em; color:var(--muted); }
+
+        /* ── Rescue Info Card ── */
+        .rescue-info-card {
+            background:rgba(46,204,113,0.07);
+            border:1px solid rgba(46,204,113,0.25);
+            border-radius:10px; padding:14px 18px;
+            display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+        }
+        .rescue-info-card .ric-icon { font-size:1.8em; }
+        .rescue-info-card .ric-title { color:var(--green); font-weight:bold; font-size:0.88em; }
+        .rescue-info-card .ric-sub   { color:#aaa; font-size:0.78em; margin-top:4px; }
+        .portal-link-btn {
+            margin-left:auto;
+            background:rgba(46,204,113,0.15);
+            border:1px solid var(--green); color:var(--green);
+            padding:7px 14px; border-radius:8px;
+            font-size:0.78em; text-decoration:none; white-space:nowrap;
+            transition:all 0.2s;
+        }
+        .portal-link-btn:hover { background:var(--green); color:#000; }
+
+        /* ── Download Button ── */
+        .dl-btn {
+            display:inline-flex; align-items:center; gap:8px;
+            background:var(--red); color:white; text-decoration:none;
+            padding:9px 20px; border-radius:8px;
+            font-size:0.82em; font-weight:bold;
+            transition:all 0.2s; box-shadow:0 4px 15px rgba(231,76,60,0.3);
+        }
+        .dl-btn:hover { background:var(--red-dark); transform:translateY(-1px); }
+        .actions-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+        /* ── Footer ── */
+        .footer {
+            text-align:center; padding:10px;
+            font-size:0.68em; color:#2a2a4a;
+            border-top:1px solid #1a1a35; background:var(--bg2);
+        }
+
+        /* ── Responsive ── */
+        @media (max-width:1100px) {
+            .stats-bar { grid-template-columns:repeat(4,1fr); }
+            .sidebar   { display:none; }
+        }
+        @media (max-width:700px) {
+            .stats-bar     { grid-template-columns:repeat(2,1fr); }
+            .navbar-center { display:none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══ NAVBAR ══ -->
+<nav class="navbar">
+    <div class="navbar-brand">
+        <span class="logo">🚁</span>
+        <div>
+            <span class="name">AIRSS</span>
+            <span class="sub">AI-Integrated Rescue &amp; Surveillance</span>
+        </div>
+    </div>
+    <div class="navbar-center">
+        <button class="nav-btn active" onclick="switchTab('live')">🎥 Live</button>
+        <button class="nav-btn" onclick="switchTab('map')">🗺️ Map</button>
+        <button class="nav-btn" onclick="switchTab('log')">📋 Log</button>
+        <button class="nav-btn" onclick="switchTab('wifi')">📶 WiFi</button>
+        <button class="nav-btn" onclick="switchTab('gps')">📍 GPS</button>
+        <button class="nav-btn" onclick="switchTab('rescue')">🆘 Rescue</button>
+    </div>
+    <div class="navbar-right">
+        <span class="time-display" id="clockDisplay">--:--:--</span>
+        <div class="live-pill" id="livePill">
+            <span class="pulse-dot"></span> LIVE
+        </div>
+    </div>
+</nav>
+
+<!-- ══ ALERT BANNER ══ -->
+<div class="alert-banner" id="alertBanner">
+    🚨 NEW SURVIVOR DETECTED — Rescue team dispatched!
+</div>
+
+<!-- ══ STATS BAR ══ -->
+<div class="stats-bar">
+    <div class="stat-card" onclick="switchTab('log')">
+        <div class="stat-icon">👥</div>
+        <div class="stat-value red" id="statTotal">0</div>
+        <div class="stat-label">Total Survivors</div>
+    </div>
+    <div class="stat-card" onclick="switchTab('live')">
+        <div class="stat-icon">🔴</div>
+        <div class="stat-value" id="statCurrent">0</div>
+        <div class="stat-label">In Frame Now</div>
+    </div>
+    <div class="stat-card" onclick="switchTab('log')">
+        <div class="stat-icon">📸</div>
+        <div class="stat-value" id="statEvents">0</div>
+        <div class="stat-label">Detection Events</div>
+    </div>
+    <div class="stat-card fps-card" onclick="switchTab('live')">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-value yellow" id="statFps">0</div>
+        <div class="stat-label">FPS</div>
+    </div>
+    <div class="stat-card wifi-card" onclick="switchTab('wifi')">
+        <div class="stat-icon">📶</div>
+        <div class="stat-value blue" id="statWifi">0</div>
+        <div class="stat-label">WiFi Devices</div>
+    </div>
+    <div class="stat-card gps-card" onclick="switchTab('gps')">
+        <div class="stat-icon">📍</div>
+        <div class="stat-value green" id="statGps">0</div>
+        <div class="stat-label">GPS Points</div>
+    </div>
+    <div class="stat-card" onclick="switchTab('rescue')">
+        <div class="stat-icon">🆘</div>
+        <div class="stat-value green" id="statRescue">0</div>
+        <div class="stat-label">Rescue Requests</div>
+    </div>
+    <div class="stat-card time-card">
+        <div class="stat-icon">🕒</div>
+        <div class="stat-value purple" id="statStart" style="font-size:0.9em;">--:--</div>
+        <div class="stat-label">Mission Start</div>
+    </div>
+</div>
+
+<!-- ══ MAIN LAYOUT ══ -->
+<div class="main-layout">
+
+    <!-- ── SIDEBAR ── -->
+    <div class="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-title">🔴 Latest Detections</div>
+            <div id="sidebarLog">
+                <div class="no-data-msg">Waiting for detections...</div>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">🆘 Rescue Requests</div>
+            <div id="sidebarRescue">
+                <div class="no-data-msg">No requests yet...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── CONTENT AREA ── -->
+    <div class="content-area">
+
+        <!-- Tab Bar -->
+        <div class="tab-bar">
+            <button class="tab-btn active" id="tab-live"   onclick="switchTab('live')">🎥 Live Feed</button>
+            <button class="tab-btn"        id="tab-map"    onclick="switchTab('map')">🗺️ Survivor Map</button>
+            <button class="tab-btn"        id="tab-log"    onclick="switchTab('log')">
+                📋 Detection Log <span class="badge-count" id="logCount">0</span>
+            </button>
+            <button class="tab-btn"        id="tab-wifi"   onclick="switchTab('wifi')">
+                📶 WiFi Scanner <span class="badge-count" id="wifiCount">0</span>
+            </button>
+            <button class="tab-btn"        id="tab-gps"    onclick="switchTab('gps')">📍 GPS Points</button>
+            <button class="tab-btn"        id="tab-rescue" onclick="switchTab('rescue')">
+                🆘 Rescue Requests <span class="badge-count" id="rescueCount">0</span>
+            </button>
+        </div>
+
+        <!-- ══ LIVE FEED ══ -->
+        <div class="tab-panel active" id="content-live">
+            <div>
+                <div class="panel-hdr">
+                    <span><i class="fa fa-circle-play"></i> &nbsp; AIRSS LIVE DRONE FEED — YOLOv8 Real-time Detection</span>
+                    <div class="hdr-right">
+                        <span class="hdr-badge" id="streamStatus">● STREAMING</span>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="feed-container">
+                        <img src="/video_feed" alt="Live Feed"
+                             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22640%22 height=%22480%22><rect fill=%22%23111%22 width=%22640%22 height=%22480%22/><text x=%22320%22 y=%22240%22 text-anchor=%22middle%22 fill=%22%23444%22 font-size=%2224%22>No Signal</text></svg>'">
+                        <div class="feed-overlays">
+                            <div class="ov-badge">FPS <b id="fpsBadge">0</b></div>
+                            <div class="ov-badge">In Frame <b id="frameBadge">0</b></div>
+                            <div class="ov-badge" id="statusBadge">🟢 Active</div>
+                        </div>
+                        <div class="feed-corner-tl">
+                            <div class="rec-badge">
+                                <span class="rec-dot"></span> REC
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="actions-bar">
+                <a href="/download-report" class="dl-btn" target="_blank">
+                    <i class="fa fa-file-pdf"></i> Download Mission Report PDF
+                </a>
+                <span style="font-size:0.75em;color:var(--muted);">
+                    Auto-refresh every 3s &nbsp;|&nbsp; YOLOv8n model
+                </span>
+            </div>
+        </div>
+
+        <!-- ══ MAP ══ -->
+        <div class="tab-panel" id="content-map">
+            <div>
+                <div class="panel-hdr">
+                    <span><i class="fa fa-map"></i> &nbsp; SURVIVOR GPS MAP — Heatmap + Markers + Clusters</span>
+                    <div class="hdr-right">
+                        <span class="hdr-badge">● HEATMAP ON</span>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <iframe class="map-frame" src="/map" id="mapFrame"></iframe>
+                </div>
+                <div class="map-controls">
+                    <!-- ✅ FIX: Removed "Drone Base HQ" legend item (marker no longer on map) -->
+                    <div class="map-legend-item">
+                        <span class="leg-dot" style="background:var(--red)"></span> YOLO Detection
+                    </div>
+                    <div class="map-legend-item">
+                        <span class="leg-dot" style="background:var(--green)"></span> Self-Reported GPS
+                    </div>
+                    <div class="map-legend-item">
+                        <span class="leg-dot" style="background:#ff6600;border-radius:2px;"></span> Heatmap Density
+                    </div>
+                    <button class="map-refresh-btn" onclick="reloadMap()">
+                        <i class="fa fa-rotate"></i> Refresh Map
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ DETECTION LOG ══ -->
+        <div class="tab-panel" id="content-log">
+            <div>
+                <div class="panel-hdr">
+                    <span><i class="fa fa-list"></i> &nbsp; SURVIVOR DETECTION LOG</span>
+                    <span id="logCountHdr" style="font-size:0.9em;color:#aaa;">0 events</span>
+                </div>
+                <div class="panel-body" style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Timestamp</th>
+                                <th>Survivors</th>
+                                <th>GPS Source</th>
+                                <th>Latitude</th>
+                                <th>Longitude</th>
+                                <th>Address</th>
+                                <th>Confidence</th>
+                                <th>Screenshot</th>
+                                <th>Map</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logBody">
+                            <tr><td colspan="10" class="empty-state">
+                                <div class="empty-icon">👁️</div>
+                                <p>Waiting for first detection...</p>
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ WIFI SCANNER ══ -->
+        <div class="tab-panel" id="content-wifi">
+            <div>
+                <div class="panel-hdr">
+                    <span><i class="fa fa-wifi"></i> &nbsp; WiFi DEVICE SCANNER — Nearby Probe Requests</span>
+                    <span id="wifiCountHdr" style="font-size:0.9em;color:#aaa;">0 devices</span>
+                </div>
+                <div class="panel-body">
+                    <div style="padding:10px 14px;border-bottom:1px solid var(--border);
+                                display:flex;gap:8px;align-items:center;">
+                        <span style="font-size:0.75em;color:var(--muted);">View:</span>
+                        <button onclick="setWifiView('cards')" id="btnWifiCards"
+                            style="background:var(--red);border:none;color:white;
+                                   padding:3px 10px;border-radius:5px;font-size:0.72em;cursor:pointer;">
+                            Cards
+                        </button>
+                        <button onclick="setWifiView('table')" id="btnWifiTable"
+                            style="background:transparent;border:1px solid var(--border);
+                                   color:var(--muted);padding:3px 10px;border-radius:5px;
+                                   font-size:0.72em;cursor:pointer;">
+                            Table
+                        </button>
+                    </div>
+                    <div id="wifiCards" class="wifi-cards"></div>
+                    <div id="wifiTableWrap" style="display:none;overflow-x:auto;">
+                        <table class="data-table wifi-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>MAC Address</th>
+                                    <th>Vendor</th>
+                                    <th>RSSI</th>
+                                    <th>Distance</th>
+                                    <th>Status</th>
+                                    <th>First Seen</th>
+                                    <th>Last Seen</th>
+                                    <th>Probes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wifiTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ GPS POINTS ══ -->
+        <div class="tab-panel" id="content-gps">
+            <div>
+                <div class="panel-hdr">
+                    <span><i class="fa fa-location-dot"></i> &nbsp; LOGGED GPS COORDINATES</span>
+                    <span id="gpsCountHdr" style="font-size:0.9em;color:#aaa;">0 points</span>
+                </div>
+                <div class="panel-body" style="overflow-x:auto;">
+                    <table class="data-table gps-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Timestamp</th>
+                                <th>Latitude</th>
+                                <th>Longitude</th>
+                                <th>Source</th>
+                                <th>Survivors</th>
+                                <th>Address</th>
+                                <th>Google Maps</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gpsBody">
+                            <tr><td colspan="8" class="empty-state">
+                                <div class="empty-icon">📍</div>
+                                <p>No GPS points logged yet...</p>
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ RESCUE REQUESTS ══ -->
+        <div class="tab-panel" id="content-rescue">
+
+            <div class="rescue-info-card">
+                <span class="ric-icon">📡</span>
+                <div>
+                    <div class="ric-title">RESCUE PORTAL — For Survivors on Their Phones</div>
+                    <div class="ric-sub">
+                        Survivors connect to <b style="color:white;">AIRSS-RESCUE</b> WiFi →
+                        portal auto-opens, OR they visit:
+                        <b style="color:var(--blue);font-family:monospace;">
+                            http://192.168.137.1:5000/rescue
+                        </b>
+                    </div>
+                </div>
+                <a href="/rescue" target="_blank" class="portal-link-btn">
+                    🔗 Preview Portal Page
+                </a>
+            </div>
+
+            <div>
+                <div class="panel-hdr"
+                     style="color:var(--green);background:rgba(46,204,113,0.08);
+                            border-color:rgba(46,204,113,0.25);">
+                    <span><i class="fa fa-bell"></i> &nbsp; INCOMING RESCUE REQUESTS FROM SURVIVORS</span>
+                    <span id="rescueCountHdr" style="font-size:0.9em;color:#aaa;">0 requests</span>
+                </div>
+                <div class="panel-body" style="overflow-x:auto;">
+                    <table class="data-table rescue-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Time</th>
+                                <th>Needs</th>
+                                <th>People</th>
+                                <th>Injuries</th>
+                                <th>Location Desc</th>
+                                <th>Extra Info</th>
+                                <th>GPS Lat</th>
+                                <th>GPS Lon</th>
+                                <th>GPS Accuracy</th>
+                                <th>Map</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rescueBody">
+                            <tr>
+                                <td colspan="11" class="empty-state">
+                                    <div class="empty-icon">🆘</div>
+                                    <p>No rescue requests received yet.</p>
+                                    <p style="font-size:0.82em;margin-top:6px;color:#555;">
+                                        Survivors connect to <b>AIRSS-RESCUE</b> WiFi
+                                        and the rescue form auto-opens on their phone.
+                                    </p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div><!-- end content-area -->
+</div><!-- end main-layout -->
+
+<div class="footer">
+    AIRSS — AI-Integrated Rescue &amp; Surveillance System &nbsp;|&nbsp;
+    YOLOv8 + Folium + Flask + Captive Portal &nbsp;|&nbsp;
+    Auto-refresh every 3s
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────
+var prevSurvivorTotal = 0;
+var prevRescueCount   = 0;   // ✅ FIX: track rescue count separately
+var wifiView          = 'cards';
+var lastLogData       = [];
+var lastWifiData      = [];
+var lastGpsData       = [];
+var lastRescueData    = [];  // ✅ FIX: dedicated rescue state
+
+// ── Clock ─────────────────────────────────────────
+function updateClock() {
+    document.getElementById('clockDisplay').textContent =
+        new Date().toLocaleTimeString('en-IN', { hour12: false });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Tab Switching ─────────────────────────────────
+function switchTab(name) {
+    document.querySelectorAll('.tab-panel').forEach(function(el) { el.classList.remove('active'); });
+    document.querySelectorAll('.tab-btn').forEach(function(el)   { el.classList.remove('active'); });
+    document.querySelectorAll('.nav-btn').forEach(function(el)   { el.classList.remove('active'); });
+
+    document.getElementById('content-' + name).classList.add('active');
+    document.getElementById('tab-'     + name).classList.add('active');
+
+    document.querySelectorAll('.nav-btn').forEach(function(btn) {
+        var txt = btn.textContent.trim().toLowerCase();
+        if (txt.includes(name)) btn.classList.add('active');
+    });
+
+    if (name === 'map')    reloadMap();
+    if (name === 'wifi')   renderWifi(lastWifiData);
+    if (name === 'log')    renderLog(lastLogData);
+    if (name === 'gps')    renderGps(lastGpsData);
+    if (name === 'rescue') renderRescueTable(lastRescueData);
+}
+
+function reloadMap() {
+    document.getElementById('mapFrame').src = '/map?' + Date.now();
+}
+
+// ── WiFi view toggle ──────────────────────────────
+function setWifiView(v) {
+    wifiView = v;
+    document.getElementById('wifiCards').style.display     = v === 'cards' ? 'grid'  : 'none';
+    document.getElementById('wifiTableWrap').style.display = v === 'table' ? 'block' : 'none';
+    document.getElementById('btnWifiCards').style.background = v === 'cards' ? 'var(--red)' : 'transparent';
+    document.getElementById('btnWifiTable').style.background = v === 'table' ? 'var(--red)' : 'transparent';
+    document.getElementById('btnWifiCards').style.color = v === 'cards' ? 'white' : 'var(--muted)';
+    document.getElementById('btnWifiTable').style.color = v === 'table' ? 'white' : 'var(--muted)';
+    renderWifi(lastWifiData);
+}
+
+// ── Stats ─────────────────────────────────────────
+function updateStats() {
+    fetch('/api/stats')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var total = data.total_survivors || 0;
+            if (total > prevSurvivorTotal) {
+                var b = document.getElementById('alertBanner');
+                b.textContent = '🚨 NEW SURVIVOR DETECTED — Rescue team dispatched!';
+                b.style.display = 'block';
+                setTimeout(function() { b.style.display = 'none'; }, 4000);
+            }
+            prevSurvivorTotal = total;
+
+            document.getElementById('statTotal').textContent   = total;
+            document.getElementById('statCurrent').textContent = data.survivor_count || 0;
+            document.getElementById('statEvents').textContent  = data.total_events   || 0;
+            document.getElementById('statFps').textContent     = (data.fps || 0).toFixed(1);
+            document.getElementById('statWifi').textContent    = data.wifi_devices   || 0;
+            document.getElementById('statStart').textContent   = (data.mission_start || '--:--:--').slice(11, 19);
+            document.getElementById('fpsBadge').textContent    = (data.fps || 0).toFixed(1);
+            document.getElementById('frameBadge').textContent  = data.survivor_count || 0;
+
+            var pill = document.getElementById('livePill');
+            var sbdg = document.getElementById('statusBadge');
+            if (data.is_active) {
+                pill.style.color = 'var(--green)';
+                sbdg.textContent = '🟢 Active';
+                sbdg.className   = 'ov-badge';
+            } else {
+                pill.style.color = 'var(--red)';
+                sbdg.textContent = '🔴 Offline';
+                sbdg.className   = 'ov-badge alert-ov';
+            }
+        }).catch(function() {});
+}
+
+// ── GPS Points ────────────────────────────────────
+function updateGpsCount() {
+    fetch('/api/gps')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            lastGpsData = data || [];
+            document.getElementById('statGps').textContent     = lastGpsData.length;
+            document.getElementById('gpsCountHdr').textContent = lastGpsData.length + ' points';
+            var active = document.querySelector('.tab-panel.active');
+            if (active && active.id === 'content-gps') renderGps(lastGpsData);
+        }).catch(function() {});
+}
+
+// ── Detection Log ─────────────────────────────────
+function fetchLog() {
+    fetch('/api/logs')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            lastLogData = data || [];
+            document.getElementById('logCount').textContent    = lastLogData.length;
+            document.getElementById('logCountHdr').textContent = lastLogData.length + ' events';
+            var active = document.querySelector('.tab-panel.active');
+            if (active && active.id === 'content-log') renderLog(lastLogData);
+            renderSidebarLog(lastLogData);
+        }).catch(function() {});
+}
+
+function renderLog(logs) {
+    var tbody = document.getElementById('logBody');
+    if (!logs || logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-state"><div class="empty-icon">👁️</div><p>Waiting for first detection...</p></td></tr>';
+        return;
+    }
+    var html = '';
+    logs.forEach(function(entry, i) {
+        var lat      = entry.lat ? parseFloat(entry.lat).toFixed(5) : '-';
+        var lon      = entry.lon ? parseFloat(entry.lon).toFixed(5) : '-';
+        var confs    = entry.confidences;
+        var confStr  = (Array.isArray(confs) && confs.length)
+            ? confs.map(function(c) { return (parseFloat(c)*100).toFixed(0)+'%'; }).join(', ')
+            : '-';
+        var mapsUrl  = (entry.lat && entry.lon)
+            ? 'https://www.google.com/maps?q=' + entry.lat + ',' + entry.lon : null;
+        var isPortal = (entry.gps_source || '').includes('Portal');
+        var addr     = entry.address
+            ? entry.address.substring(0,35) + (entry.address.length > 35 ? '...' : '') : '-';
+        var scr      = entry.screenshot
+            ? '<a class="screenshot-link" href="/screenshots/' +
+              entry.screenshot.split(/[/\\]/).pop() +
+              '" target="_blank">📸 View</a>' : '-';
+        html +=
+            '<tr>' +
+            '<td>' + (i+1) + '</td>' +
+            '<td style="font-family:monospace;font-size:0.9em;">' + (entry.timestamp || '-') + '</td>' +
+            '<td><span class="tag ' + (isPortal ? 'tag-green' : 'tag-red') + '">' + (entry.survivor_count || 1) + '</span></td>' +
+            '<td><span class="tag tag-blue" style="font-size:0.72em;">' + (entry.gps_source || '-') + '</span></td>' +
+            '<td style="font-family:monospace;">' + lat + '</td>' +
+            '<td style="font-family:monospace;">' + lon + '</td>' +
+            '<td style="font-size:0.85em;color:#aaa;" title="' + (entry.address||'') + '">' + addr + '</td>' +
+            '<td style="color:var(--yellow);">' + confStr + '</td>' +
+            '<td>' + scr + '</td>' +
+            '<td>' + (mapsUrl ? '<a class="maps-link" href="' + mapsUrl + '" target="_blank">🗺️</a>' : '-') + '</td>' +
+            '</tr>';
+    });
+    tbody.innerHTML = html;
+}
+
+function renderSidebarLog(logs) {
+    var el = document.getElementById('sidebarLog');
+    if (!logs || logs.length === 0) {
+        el.innerHTML = '<div class="no-data-msg">Waiting for detections...</div>';
+        return;
+    }
+    var html = '';
+    logs.slice(0, 5).forEach(function(entry) {
+        var lat = entry.lat ? parseFloat(entry.lat).toFixed(4) : '?';
+        var lon = entry.lon ? parseFloat(entry.lon).toFixed(4) : '?';
+        html +=
+            '<div class="mini-log-item" onclick="switchTab(\'log\')">' +
+            '<span class="mini-count">👤 ' + (entry.survivor_count || 1) + ' survivor(s)</span>' +
+            '<div class="mini-time">' + (entry.timestamp || '-') + '</div>' +
+            '<div class="mini-gps">📍 ' + lat + ', ' + lon + '</div>' +
+            '</div>';
+    });
+    el.innerHTML = html;
+}
+
+// ── WiFi ──────────────────────────────────────────
+function fetchWifi() {
+    fetch('/api/wifi')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            lastWifiData = data || [];
+            document.getElementById('wifiCount').textContent    = lastWifiData.length;
+            document.getElementById('wifiCountHdr').textContent = lastWifiData.length + ' devices';
+            var active = document.querySelector('.tab-panel.active');
+            if (active && active.id === 'content-wifi') renderWifi(lastWifiData);
+        }).catch(function() {});
+}
+
+function renderWifi(devices) {
+    var cardsEl = document.getElementById('wifiCards');
+    var tableEl = document.getElementById('wifiTableBody');
+    if (!devices || devices.length === 0) {
+        cardsEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">📡</div><p>Scanning for WiFi devices...</p></div>';
+        tableEl.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="empty-icon">📡</div><p>Scanning...</p></td></tr>';
+        return;
+    }
+    var vendorEmoji = { Samsung:'📱', Apple:'🍎', Xiaomi:'📲', Realme:'📳', OnePlus:'🔴', Vivo:'💙', Oppo:'🟢', Motorola:'〽️' };
+    var cardsHtml = '', tableHtml = '';
+    devices.forEach(function(d, i) {
+        var rssi   = d.rssi || -80;
+        var pct    = Math.min(100, Math.max(0, ((rssi + 100) / 60) * 100));
+        var sigCls = pct > 65 ? 'sig-good' : (pct > 35 ? 'sig-ok' : 'sig-bad');
+        var isLost = (d.status === 'LOST');
+        var emoji  = vendorEmoji[d.vendor] || '📱';
+
+        cardsHtml +=
+            '<div class="wifi-card' + (isLost ? ' lost' : '') + '">' +
+            '<div class="wc-vendor">' + emoji + ' ' + (d.vendor || 'Unknown') +
+            (isLost
+                ? ' <span class="tag tag-lost"   style="font-size:0.7em;margin-left:auto;">LOST</span>'
+                : ' <span class="tag tag-green" style="font-size:0.7em;margin-left:auto;">ACTIVE</span>') +
+            '</div>' +
+            '<div class="wc-mac">' + (d.mac || '?') + '</div>' +
+            '<div class="wc-distance">📡 ' + (d.distance || 'Unknown') + '</div>' +
+            '<div class="signal-bar"><div class="signal-fill ' + sigCls + '" style="width:' + pct + '%"></div></div>' +
+            '<div class="wc-footer">' +
+            '<span class="probes-count">Probes: ' + (d.probes || 1) + '</span>' +
+            '<span style="font-size:0.68em;color:var(--yellow);">' + rssi + ' dBm</span>' +
+            '</div>' +
+            '<div class="wc-times">🕐 First: ' + (d.first_seen||'-') + '<br>🕑 Last: ' + (d.last_seen||'-') + '</div>' +
+            '</div>';
+
+        tableHtml +=
+            '<tr>' +
+            '<td>' + (i+1) + '</td>' +
+            '<td style="font-family:monospace;font-size:0.9em;">' + (d.mac||'-') + '</td>' +
+            '<td>' + emoji + ' ' + (d.vendor||'-') + '</td>' +
+            '<td style="color:var(--yellow);">' + rssi + ' dBm</td>' +
+            '<td style="font-size:0.85em;">' + (d.distance||'-') + '</td>' +
+            '<td><span class="tag ' + (isLost ? 'tag-lost' : 'tag-green') + '">' + (d.status||'ACTIVE') + '</span></td>' +
+            '<td>' + (d.first_seen||'-') + '</td>' +
+            '<td>' + (d.last_seen||'-')  + '</td>' +
+            '<td style="color:var(--blue);">' + (d.probes||1) + '</td>' +
+            '</tr>';
+    });
+    cardsEl.innerHTML = cardsHtml;
+    tableEl.innerHTML = tableHtml;
+}
+
+// ── GPS Table ─────────────────────────────────────
+function renderGps(points) {
+    var tbody = document.getElementById('gpsBody');
+    if (!points || points.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="empty-icon">📍</div><p>No GPS points logged yet...</p></td></tr>';
+        return;
+    }
+    var html = '';
+    points.forEach(function(pt, i) {
+        var lat  = pt.lat ? parseFloat(pt.lat).toFixed(6) : '-';
+        var lon  = pt.lon ? parseFloat(pt.lon).toFixed(6) : '-';
+        var url  = (pt.lat && pt.lon) ? 'https://www.google.com/maps?q=' + pt.lat + ',' + pt.lon : null;
+        var addr = pt.address ? pt.address.substring(0,35) + (pt.address.length>35?'...':'') : '-';
+        var src  = (pt.gps_source||'').includes('Portal') ? 'tag-green' : 'tag-blue';
+        html +=
+            '<tr>' +
+            '<td>' + (i+1) + '</td>' +
+            '<td style="font-family:monospace;font-size:0.9em;">' + (pt.timestamp||'-') + '</td>' +
+            '<td style="font-family:monospace;">' + lat + '</td>' +
+            '<td style="font-family:monospace;">' + lon + '</td>' +
+            '<td><span class="tag ' + src + '" style="font-size:0.72em;">' + (pt.gps_source||'-') + '</span></td>' +
+            '<td><span class="tag tag-red">' + (pt.survivor_count||1) + '</span></td>' +
+            '<td style="font-size:0.82em;color:#aaa;" title="' + (pt.address||'') + '">' + addr + '</td>' +
+            '<td>' + (url ? '<a class="maps-link" href="' + url + '" target="_blank">🗺️ Open</a>' : '-') + '</td>' +
+            '</tr>';
+    });
+    tbody.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════
+// ✅ FIX: Rescue now uses dedicated /api/rescue
+//    instead of filtering /api/gps for Portal entries
+// ══════════════════════════════════════════════════
+function fetchRescue() {
+    fetch('/api/rescue')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            lastRescueData = data || [];
+            var count = lastRescueData.length;
+
+            document.getElementById('statRescue').textContent     = count;
+            document.getElementById('rescueCount').textContent     = count;
+            document.getElementById('rescueCountHdr').textContent  = count + ' requests';
+
+            // Flash alert banner on brand-new request
+            if (count > prevRescueCount) {
+                var b = document.getElementById('alertBanner');
+                b.textContent = '🆘 NEW RESCUE REQUEST received! (' + count + ' total)';
+                b.style.display = 'block';
+                setTimeout(function() { b.style.display = 'none'; }, 5000);
+            }
+            prevRescueCount = count;
+
+            var active = document.querySelector('.tab-panel.active');
+            if (active && active.id === 'content-rescue') renderRescueTable(lastRescueData);
+            renderSidebarRescue(lastRescueData);
+        }).catch(function() {});
+}
+
+function renderRescueTable(requests) {
+    var tbody = document.getElementById('rescueBody');
+    var sbEl  = document.getElementById('sidebarRescue');
+
+    if (!requests || requests.length === 0) {
+        tbody.innerHTML =
+            '<tr><td colspan="11" class="empty-state">' +
+            '<div class="empty-icon">🆘</div>' +
+            '<p>No rescue requests received yet.</p>' +
+            '<p style="font-size:0.82em;margin-top:6px;color:#555;">Survivors connect to <b>AIRSS-RESCUE</b> WiFi and the form auto-opens.</p>' +
+            '</td></tr>';
+        if (sbEl) sbEl.innerHTML = '<div class="no-data-msg">No requests yet...</div>';
+        return;
+    }
+
+    var html = '';
+    requests.forEach(function(pt, i) {
+        var lat      = pt.lat ? parseFloat(pt.lat).toFixed(5) : '-';
+        var lon      = pt.lon ? parseFloat(pt.lon).toFixed(5) : '-';
+        // ✅ FIX: use accuracy_m (correct key from /api/rescue)
+        var acc      = pt.accuracy_m ? Math.round(pt.accuracy_m) + 'm' : (pt.accuracy ? Math.round(pt.accuracy) + 'm' : '-');
+        var url      = (pt.lat && pt.lon)
+            ? 'https://www.google.com/maps?q=' + pt.lat + ',' + pt.lon : null;
+        var needsArr = Array.isArray(pt.needs) ? pt.needs : (pt.needs ? [pt.needs] : []);
+        var needsHtml = needsArr.map(function(n) {
+            return '<span class="tag tag-green" style="font-size:0.7em;">' + n + '</span>';
+        }).join(' ') || '-';
+        var inj      = Array.isArray(pt.injuries) && pt.injuries.length
+            ? pt.injuries.join(', ') : 'None';
+        var locDesc  = (pt.location_desc || '-').substring(0, 40);
+        var extra    = (pt.extra_info    || '-').substring(0, 35);
+
+        html +=
+            '<tr>' +
+            '<td>' + (i+1) + '</td>' +
+            '<td style="font-family:monospace;font-size:0.85em;">' + (pt.timestamp||'-') + '</td>' +
+            '<td>' + needsHtml + '</td>' +
+            '<td><span class="tag tag-red">' + (pt.survivor_count||1) + '</span></td>' +
+            '<td style="color:var(--yellow);font-size:0.85em;">' + inj + '</td>' +
+            '<td style="font-size:0.82em;color:#aaa;" title="' + (pt.location_desc||'') + '">' + locDesc + '</td>' +
+            '<td style="font-size:0.82em;color:#aaa;" title="' + (pt.extra_info||'') + '">' + extra + '</td>' +
+            '<td style="font-family:monospace;">' + lat + '</td>' +
+            '<td style="font-family:monospace;">' + lon + '</td>' +
+            '<td style="color:var(--blue);font-size:0.85em;">' + acc + '</td>' +
+            '<td>' + (url ? '<a class="maps-link" href="' + url + '" target="_blank">🗺️ Open</a>' : '-') + '</td>' +
+            '</tr>';
+    });
+    tbody.innerHTML = html;
+}
+
+function renderSidebarRescue(requests) {
+    var sbEl = document.getElementById('sidebarRescue');
+    if (!requests || requests.length === 0) {
+        sbEl.innerHTML = '<div class="no-data-msg">No requests yet...</div>';
+        return;
+    }
+    var sbHtml = '';
+    requests.slice(0, 5).forEach(function(pt) {
+        var lat      = pt.lat ? parseFloat(pt.lat).toFixed(4) : '?';
+        var lon      = pt.lon ? parseFloat(pt.lon).toFixed(4) : '?';
+        var needsArr = Array.isArray(pt.needs) ? pt.needs : (pt.needs ? [pt.needs] : []);
+        sbHtml +=
+            '<div class="rescue-request-item" onclick="switchTab(\'rescue\')">' +
+            '<span class="rescue-needs">🆘 ' + (needsArr.join(', ')||'?') +
+            ' — ' + (pt.survivor_count||1) + ' person(s)</span>' +
+            '<div class="rescue-gps">📍 ' + lat + ', ' + lon + '</div>' +
+            '<div style="font-size:0.7em;color:var(--muted);margin-top:2px;">' + (pt.timestamp||'') + '</div>' +
+            '</div>';
+    });
+    sbEl.innerHTML = sbHtml;
+}
+
+// ── Master Refresh ────────────────────────────────
+function refreshAll() {
+    updateStats();
+    fetchLog();
+    fetchWifi();
+    updateGpsCount();
+    fetchRescue();   // ✅ FIX: now called every cycle
+}
+
+refreshAll();
+setInterval(refreshAll, 3000);
+
+</script>
+<!-- ═══════════════════════════════════════════════════
+     EMERGENCY CHATBOT WIDGET
+     ═══════════════════════════════════════════════════ -->
+<div id="chatbot-widget" style="
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 340px;
+    font-family: system-ui, sans-serif;
+    z-index: 99999;
+">
+  <!-- Toggle Button -->
+  <button id="chatbot-toggle" onclick="toggleChat()" style="
+      width: 100%;
+      padding: 10px 14px;
+      background: #dc2626;
+      color: #fff;
+      border: none;
+      border-radius: 8px 8px 0 0;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+  ">
+    <span>🚑 Emergency First-Aid Help</span>
+    <span id="chatbot-arrow">▲</span>
+  </button>
+
+  <!-- Chat Panel -->
+  <div id="chatbot-panel" style="
+      background: #111827;
+      border: 1px solid #374151;
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      display: flex;
+      flex-direction: column;
+  ">
+    <!-- Disclaimer banner -->
+    <div style="
+        background: #7f1d1d;
+        color: #fca5a5;
+        font-size: 11px;
+        padding: 6px 10px;
+        text-align: center;
+    ">
+      ⚠️ NOT a doctor. For life-threatening emergencies call emergency services NOW.
+    </div>
+
+    <!-- Messages -->
+    <div id="chatbot-messages" style="
+        height: 240px;
+        overflow-y: auto;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 13px;
+        color: #e5e7eb;
+    ">
+      <div style="
+          background: #1f2937;
+          border-radius: 6px;
+          padding: 8px 10px;
+          border-left: 3px solid #dc2626;
+      ">
+        <b style="color:#dc2626;">Bot:</b><br>
+        Describe the rescued person's condition and I'll give basic first-aid guidance.<br><br>
+        Examples: <i>heavy bleeding, not breathing, burn, broken bone, fever, drowning</i>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div style="
+        display: flex;
+        border-top: 1px solid #374151;
+        padding: 8px;
+        gap: 6px;
+    ">
+      <input id="chatbot-input"
+             type="text"
+             placeholder="Describe the situation..."
+             style="
+                flex: 1;
+                background: #1f2937;
+                border: 1px solid #4b5563;
+                border-radius: 5px;
+                padding: 6px 8px;
+                color: #f9fafb;
+                font-size: 13px;
+                outline: none;
+             "
+      />
+      <button id="chatbot-send" style="
+          background: #dc2626;
+          color: #fff;
+          border: none;
+          border-radius: 5px;
+          padding: 6px 12px;
+          font-size: 13px;
+          cursor: pointer;
+          font-weight: 600;
+      ">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ── Toggle open/close ────────────────────────────
+  window.toggleChat = function () {
+    const panel = document.getElementById("chatbot-panel");
+    const arrow = document.getElementById("chatbot-arrow");
+    const hidden = panel.style.display === "none";
+    panel.style.display = hidden ? "flex" : "none";
+    arrow.textContent   = hidden ? "▲" : "▼";
+  };
+
+  // ── Append message bubble ─────────────────────────
+  function appendMsg(from, text, isBot) {
+    const msgs = document.getElementById("chatbot-messages");
+    const div  = document.createElement("div");
+    div.style.cssText = `
+      background: ${isBot ? "#1f2937" : "#164e63"};
+      border-radius: 6px;
+      padding: 8px 10px;
+      border-left: 3px solid ${isBot ? "#dc2626" : "#0ea5e9"};
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    `;
+    div.innerHTML = `<b style="color:${isBot ? "#dc2626" : "#38bdf8"};">${from}:</b><br>${text}`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  // ── Send message ──────────────────────────────────
+  async function sendMessage() {
+    const input = document.getElementById("chatbot-input");
+    const text  = input.value.trim();
+    if (!text) return;
+
+    appendMsg("You", text, false);
+    input.value = "";
+
+    // Typing indicator
+    const msgs    = document.getElementById("chatbot-messages");
+    const typing  = document.createElement("div");
+    typing.id     = "typing-indicator";
+    typing.style.cssText = "color:#6b7280; font-size:12px; padding:4px 10px;";
+    typing.textContent   = "Bot is thinking...";
+    msgs.appendChild(typing);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    try {
+      const res  = await fetch("/api/chat", {
+        method  : "POST",
+        headers : { "Content-Type": "application/json" },
+        body    : JSON.stringify({ message: text }),
+      });
+      const data = await res.json();
+      typing.remove();
+      appendMsg("Bot", data.reply || "Sorry, could not process that.", true);
+    } catch (e) {
+      typing.remove();
+      appendMsg("Bot", "Network error. Please try again.", true);
+    }
+  }
+
+  // ── Event listeners ───────────────────────────────
+  document.getElementById("chatbot-send")
+    .addEventListener("click", sendMessage);
+
+  document.getElementById("chatbot-input")
+    .addEventListener("keydown", function (e) {
+      if (e.key === "Enter") sendMessage();
+    });
+})();
+</script>
+
+</body>
+</html>
